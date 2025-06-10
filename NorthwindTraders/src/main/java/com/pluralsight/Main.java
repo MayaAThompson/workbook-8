@@ -1,13 +1,19 @@
 package com.pluralsight;
 
 import com.pluralsight.utils.IOUtils;
+
 import java.sql.*;
 
 public class Main {
-    static String user = IOUtils.messageAndResponse("User: ");
-    static String password = IOUtils.messageAndResponse("Pass: ");
+    static String user = "root";
+    static String password = System.getenv("DB_PASSWORD");
 
     public static void main(String[] args) {
+
+        if (password != null)
+            System.out.println("saved password retrieved");
+        else
+            System.out.println("DB_PASSWORD environment variable not set.");
 
         boolean keepMenuRunning = true;
 
@@ -17,10 +23,52 @@ public class Main {
             switch (choice) {
                 case 1 -> displayAllProducts();
                 case 2 -> displayAllCustomers();
+                case 3 -> displayAllCategories();
                 case 0 -> keepMenuRunning = false;
                 default -> System.out.println("Please choose an available option.");
             }
-            IOUtils.pauseReturn();
+//            IOUtils.pauseReturn();
+        }
+    }
+
+    private static void displayAllCategories() {
+        String url = "jdbc:mysql://localhost:3306/northwind";
+        try (Connection connection = DriverManager.getConnection(url, user, password)) {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM categories ORDER BY CategoryID");
+
+            ResultSet categories = statement.executeQuery();
+
+            while (categories.next()) {
+                int categoryId = categories.getInt("CategoryID");
+                String categoryName = categories.getString("CategoryName");
+
+                System.out.println(categoryId + ") " + categoryName);
+            }
+            int choice = IOUtils.messageAndResponseInt("Choose a category number: ");
+
+            String query = "SELECT * FROM products WHERE CategoryID = ?";
+            statement = connection.prepareStatement(query);
+            statement.setInt(1, choice);
+
+            ResultSet products = statement.executeQuery();
+            StringBuilder stringOut = new StringBuilder();
+
+            while (products.next()) {
+                int productId = products.getInt("ProductID");
+                String productName = products.getString("ProductName");
+                double unitPrice = products.getDouble("UnitPrice");
+                int unitsInStock = products.getInt("UnitsInStock");
+
+                String singleResult = String.format("Product ID: %d\nProduct Name: %s\nPrice: %.2f\nUnits in Stock: %d", productId, productName, unitPrice, unitsInStock);
+                stringOut.append(singleResult);
+                stringOut.append("\n\n--------------------\n\n");
+
+            }
+            System.out.println(stringOut);
+        } catch (SQLException | ClassNotFoundException e) {
+            System.out.println("there was a SQL problem");
         }
     }
 
@@ -43,7 +91,6 @@ public class Main {
                 String singleResult = String.format("Contact Name: %s\nCompany Name: %s\nCity: %s\nCountry: %s\nPhone Number: %s", contactName, companyName, city, country, phoneNumber);
                 stringOut.append(singleResult);
                 stringOut.append("\n\n--------------------\n\n");
-
             }
             System.out.println(stringOut);
         } catch (SQLException | ClassNotFoundException e) {
@@ -82,6 +129,7 @@ public class Main {
                 What do you want to do?
                 1) Display all products
                 2) Display all customers
+                3) Display all categories
                 0) Exit""");
         return IOUtils.messageAndResponseInt("Choose an option: ");
     }
