@@ -1,6 +1,7 @@
 package com.pluralsight;
 
 import com.pluralsight.utils.IOUtils;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.*;
 
@@ -9,32 +10,39 @@ public class Main {
     static String password = System.getenv("DB_PASSWORD");
 
     public static void main(String[] args) {
-
         if (password != null)
             System.out.println("saved password retrieved");
         else
             System.out.println("DB_PASSWORD environment variable not set.");
 
-        boolean keepMenuRunning = true;
+        String url = "jdbc:mysql://localhost:3306/northwind";
 
-        while (keepMenuRunning) {
-            int choice = mainMenuUI();
+        try (BasicDataSource dataSource = new BasicDataSource()) {
+            dataSource.setUrl(url);
+            dataSource.setUsername(user);
+            dataSource.setPassword(password);
+            boolean keepMenuRunning = true;
 
-            switch (choice) {
-                case 1 -> displayAllProducts();
-                case 2 -> displayAllCustomers();
-                case 3 -> displayAllCategories();
-                case 0 -> keepMenuRunning = false;
-                default -> System.out.println("Please choose an available option.");
-            }
+            while (keepMenuRunning) {
+                int choice = mainMenuUI();
+
+                switch (choice) {
+                    case 1 -> displayAllProducts(dataSource);
+                    case 2 -> displayAllCustomers(dataSource);
+                    case 3 -> displayAllCategories(dataSource);
+                    case 0 -> keepMenuRunning = false;
+                    default -> System.out.println("Please choose an available option.");
+                }
 //            IOUtils.pauseReturn();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("oops, MySQL ran into an issue");
         }
     }
 
-    private static void displayAllCategories() {
-        String url = "jdbc:mysql://localhost:3306/northwind";
-        try (Connection connection = DriverManager.getConnection(url, user, password)) {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+    private static void displayAllCategories(BasicDataSource dataSource) {
+        try (Connection connection = dataSource.getConnection()) {
 
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM categories ORDER BY CategoryID");
 
@@ -67,15 +75,13 @@ public class Main {
 
             }
             System.out.println(stringOut);
-        } catch (SQLException | ClassNotFoundException e) {
+        } catch (SQLException e) {
             System.out.println("there was a SQL problem");
         }
     }
 
-    private static void displayAllCustomers() {
-        String url = "jdbc:mysql://localhost:3306/northwind";
-        try (Connection connection = DriverManager.getConnection(url, user, password)) {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+    private static void displayAllCustomers(BasicDataSource dataSource) {
+        try (Connection connection = dataSource.getConnection()) {
 
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM customers ORDER BY Country;");
 
@@ -93,15 +99,13 @@ public class Main {
                 stringOut.append("\n\n--------------------\n\n");
             }
             System.out.println(stringOut);
-        } catch (SQLException | ClassNotFoundException e) {
+        } catch (SQLException e) {
             System.out.println("There was a Sql issue");
         }
     }
 
-    private static void displayAllProducts() {
-        String url = "jdbc:mysql://localhost:3306/northwind";
-        try (Connection connection = DriverManager.getConnection(url, user, password)) {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+    private static void displayAllProducts(BasicDataSource dataSource) {
+        try (Connection connection = dataSource.getConnection()) {
 
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM products ORDER BY ProductName;");
 
@@ -119,7 +123,7 @@ public class Main {
 
             }
             System.out.println(stringOut);
-        } catch (SQLException | ClassNotFoundException e) {
+        } catch (SQLException e) {
             System.out.println("There was a Sql issue");
         }
     }
